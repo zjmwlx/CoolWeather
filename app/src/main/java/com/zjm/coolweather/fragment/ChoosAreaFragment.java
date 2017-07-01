@@ -4,6 +4,7 @@ package com.zjm.coolweather.fragment;
 import android.app.ProgressDialog;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -166,7 +167,7 @@ public class ChoosAreaFragment extends Fragment {
     private void quryCounties() {
         titleText.setText(selectedCity.getCityName());
         btn_back.setVisibility(View.VISIBLE);
-        counties = DataSupport.where("cityid = ?", String.valueOf(selectedCity.getId())).find(County.class);
+        counties = DataSupport.where("cityid =?", String.valueOf(selectedCity.getId())).find(County.class);
         if (counties.size() > 0) {
             dataList.clear();
             for (County county : counties) {
@@ -189,7 +190,7 @@ public class ChoosAreaFragment extends Fragment {
     private void queryCities() {
         titleText.setText(selectedProvince.getProvinceNmae());
         btn_back.setVisibility(View.VISIBLE);
-        cities = DataSupport.where("provinceid = ?", String.valueOf(selectedProvince.getId())).find(City.class);
+        cities = DataSupport.where("provinceid =?", String.valueOf(selectedProvince.getId())).find(City.class);
         if (cities.size() > 0) {
             dataList.clear();
             for (City city : cities) {
@@ -221,6 +222,13 @@ public class ChoosAreaFragment extends Fragment {
                 boolean result = false;
                 if ("province".equals(type)) {
                     result = Untility.handleProcinceResponse(responseText);
+                    Log.i("zjm", "查询省份完成");
+                }else if("city".equals(type)){
+                    result = Untility.handleCityResponse(responseText,selectedProvince.getId());
+                    Log.i("zjm", "查询城市完成");
+                }else if ("county".equals(type)){
+                    result = Untility.handleCountiesResponse(responseText,selectedCity.getId());
+                    Log.i("zjm", "查询县区完成");
                 }
                 if (result) {
                     getActivity().runOnUiThread(new Runnable() {
@@ -229,6 +237,10 @@ public class ChoosAreaFragment extends Fragment {
                             closeProgressDialog();
                             if ("province".equals(type)) {
                                 quryProvinces();
+                            }else if("city".equals(type)){
+                                queryCities();
+                            }else if ("county".equals(type)){
+                                quryCounties();
                             }
                         }
                     });
