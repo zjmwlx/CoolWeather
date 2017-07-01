@@ -6,8 +6,8 @@
     android:background="#fff">
     <RelativeLayout
         android:layout_width="match_parent"
-        android:layout_height="?attr/actionBarSize"
-        android:background="?attr/colorPrimary">
+        android:layout_height="48dp"
+        android:background="#6857b2">
         <TextView
             android:id="@+id/titleText"
             android:layout_width="wrap_content"

@@ -1,16 +1,12 @@
 package com.zjm.coolweather.fragment;
 
 
-import android.app.Application;
 import android.app.ProgressDialog;
 import android.os.Bundle;
-
-import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Adapter;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
@@ -19,6 +15,8 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.zjm.coolweather.R;
+import com.zjm.coolweather.db.City;
+import com.zjm.coolweather.db.County;
 import com.zjm.coolweather.db.Province;
 import com.zjm.coolweather.util.HttpUtil;
 import com.zjm.coolweather.util.Untility;
@@ -66,9 +64,25 @@ public class ChoosAreaFragment extends Fragment {
      */
     private List<Province> provinces;
     /**
+     * 城市列表
+     */
+    private List<City> cities;
+    /**
+     * 县区列表
+     */
+    private List<County> counties;
+    /**
      * 当前显示的行政级别
      */
     private int currentlevel;
+    /**
+     * 当前选中的省份
+     */
+    private Province selectedProvince;
+    /**
+     * 当前选中的城市列表
+     */
+    private City selectedCity;
     private ProgressDialog progressDialog;
 
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -81,10 +95,11 @@ public class ChoosAreaFragment extends Fragment {
         adapter = new ArrayAdapter<String>(getContext(), android.R.layout.simple_list_item_1, dataList);
         listView.setAdapter(adapter);
         return view;
+
     }
 
     @Override
-    public void onActivityCreated(@Nullable Bundle savedInstanceState) {
+    public void onActivityCreated(Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
 
         /**
@@ -93,10 +108,28 @@ public class ChoosAreaFragment extends Fragment {
         listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                quryProvinces();
+                if (currentlevel == LEVEL_PROVINCE) {
+                    selectedProvince = provinces.get(position);
+                    queryCities();
+                } else if (currentlevel == LEVEL_CITY) {
+                    selectedCity = cities.get(position);
+                    quryCounties();
+                }
             }
         });
+        btn_back.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if (currentlevel == LEVEL_COUNTY) {
+                    queryCities();
+                } else if (currentlevel == LEVEL_CITY) {
+                    quryProvinces();
+                }
+            }
+        });
+        quryProvinces();
     }
+
 
     /**
      * 查询全国所有的省，优先从数据库查询，如果数据库中查询不到，再到服务器查询
@@ -124,6 +157,51 @@ public class ChoosAreaFragment extends Fragment {
             //如果provinces为空，则从网络获取省份列表
             String address = "http://guolin.tech/api/china";
             queryFromServer(address, "province");
+        }
+    }
+
+    /**
+     * 查询县区列表
+     */
+    private void quryCounties() {
+        titleText.setText(selectedCity.getCityName());
+        btn_back.setVisibility(View.VISIBLE);
+        counties = DataSupport.where("cityid = ?", String.valueOf(selectedCity.getId())).find(County.class);
+        if (counties.size() > 0) {
+            dataList.clear();
+            for (County county : counties) {
+                dataList.add(county.getCountyName());
+            }
+            adapter.notifyDataSetChanged();
+            listView.setSelection(0);
+            currentlevel = LEVEL_COUNTY;
+        } else {
+            int provinceCode = selectedProvince.getProvinceCode();
+            int cityCode = selectedCity.getCityCode();
+            String address = "http://guolin.tech/api/china/"+provinceCode+"/"+cityCode;
+            queryFromServer(address,"county");
+        }
+    }
+
+    /**
+     * 查询城市列表
+     */
+    private void queryCities() {
+        titleText.setText(selectedProvince.getProvinceNmae());
+        btn_back.setVisibility(View.VISIBLE);
+        cities = DataSupport.where("provinceid = ?", String.valueOf(selectedProvince.getId())).find(City.class);
+        if (cities.size() > 0) {
+            dataList.clear();
+            for (City city : cities) {
+                dataList.add(city.getCityName());
+            }
+            adapter.notifyDataSetChanged();
+            listView.setSelection(0);
+            currentlevel = LEVEL_CITY;
+        } else {
+            int provinceCode = selectedProvince.getProvinceCode();
+            String address = "http://guolin.tech/api/china/" + provinceCode;
+            queryFromServer(address, "city");
         }
     }
 
@@ -160,13 +238,13 @@ public class ChoosAreaFragment extends Fragment {
             @Override
             public void onFailure(Call call, IOException e) {
 //通过runOnUiThread()方法回到主线程处理逻辑
-               getActivity().runOnUiThread(new Runnable() {
-                   @Override
-                   public void run() {
-                       closeProgressDialog();
-                       Toast.makeText(getContext(),"加载失败！",Toast.LENGTH_SHORT).show();
-                   }
-               });
+                getActivity().runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        closeProgressDialog();
+                        Toast.makeText(getContext(), "加载失败！", Toast.LENGTH_SHORT).show();
+                    }
+                });
 
             }
 
@@ -194,4 +272,5 @@ public class ChoosAreaFragment extends Fragment {
         }
         progressDialog.show();
     }
+
 }
