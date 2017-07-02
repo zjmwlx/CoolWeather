@@ -22,7 +22,7 @@
             android:layout_margin="10dp"
             android:layout_alignParentLeft="true"
             android:layout_centerVertical="true"
-            android:background="@drawable/back"/>
+            android:background="@drawable/weibosdk_navigationbar_back"/>
 
 
     </RelativeLayout>

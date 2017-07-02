@@ -6,11 +6,13 @@ import android.preference.PreferenceManager;
 import android.support.v7.app.AppCompatActivity;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.bumptech.glide.Glide;
 import com.zjm.coolweather.gson.Forecast;
 import com.zjm.coolweather.gson.Weather;
 import com.zjm.coolweather.util.HttpUtil;
@@ -37,6 +39,7 @@ public class WeartherActivity extends AppCompatActivity {
     private TextView comfortText;
     private TextView carWashText;
     private TextView sportText;
+    private ImageView bingPicImg;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -56,6 +59,8 @@ public class WeartherActivity extends AppCompatActivity {
         comfortText = (TextView) findViewById(R.id.comfort_text);
         carWashText = (TextView) findViewById(R.id.car_wash_text);
         sportText = (TextView) findViewById(R.id.sport_text);
+        bingPicImg = (ImageView) findViewById(R.id.bing_pic_img);
+
 
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
         String weatherString = prefs.getString("weather", null);
@@ -69,8 +74,45 @@ public class WeartherActivity extends AppCompatActivity {
             weatherLayout.setVisibility(View.INVISIBLE);
             requestWeather(weatherId);
         }
+        /**
+         * 加载必应每日一图
+         */
+        String bingPic = prefs.getString("bing_pic", null);
+        if (bingPic != null) {
+            Glide.with(this).load(bingPic).into(bingPicImg);
+        } else {
+            loadBingPic();
+        }
 
     }
+
+    /**
+     * 加载必应每日一图
+     */
+    private void loadBingPic() {
+        String requesBingPic = "http://guolin.tech/api/bing_pic";
+        HttpUtil.sendOkHttpRequest(requesBingPic, new Callback() {
+            @Override
+            public void onResponse(Call call, Response response) throws IOException {
+                final String bingPic = response.body().string();
+                SharedPreferences.Editor editer = PreferenceManager.getDefaultSharedPreferences(WeartherActivity.this).edit();
+                editer.putString("bing_pic",bingPic);
+                editer.apply();
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        Glide.with(WeartherActivity.this).load(bingPic).into(bingPicImg);
+                    }
+                });
+            }
+
+            @Override
+            public void onFailure(Call call, IOException e) {
+
+            }
+        });
+    }
+
 
     /**
      * 根据天气id获取城市天气信息
@@ -93,7 +135,7 @@ public class WeartherActivity extends AppCompatActivity {
                             editor.apply();
                             showWeatherInfo(weather);
                         } else {
-                            Toast.makeText(WeartherActivity.this, "获取天气信息失败！",Toast.LENGTH_SHORT).show();
+                            Toast.makeText(WeartherActivity.this, "获取天气信息失败！", Toast.LENGTH_SHORT).show();
                         }
                     }
                 });
@@ -105,13 +147,14 @@ public class WeartherActivity extends AppCompatActivity {
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-                        Toast.makeText(WeartherActivity.this, "获取天气信息失败！",Toast.LENGTH_SHORT).show();
+                        Toast.makeText(WeartherActivity.this, "获取天气信息失败！", Toast.LENGTH_SHORT).show();
                     }
                 });
             }
 
 
         });
+        loadBingPic();
     }
 
     /**
@@ -123,7 +166,7 @@ public class WeartherActivity extends AppCompatActivity {
     private void showWeatherInfo(Weather weather) {
         String updateTime = weather.basic.update.updateTime.split(" ")[1];
         String cityName = weather.basic.cityName;
-        String degree = weather.now.temperature+"℃";
+        String degree = weather.now.temperature + "℃";
         String weatherInfo = weather.now.more.info;
 
         titleCity.setText(cityName);
@@ -131,12 +174,12 @@ public class WeartherActivity extends AppCompatActivity {
         degreeText.setText(degree);
         weatherInfoText.setText(weatherInfo);
         forecastLayout.removeAllViews();
-        for (Forecast forecast:weather.forecastList){
-            View view = LayoutInflater.from(this).inflate(R.layout.forecast_item,forecastLayout,false);
+        for (Forecast forecast : weather.forecastList) {
+            View view = LayoutInflater.from(this).inflate(R.layout.forecast_item, forecastLayout, false);
             TextView dateText = (TextView) view.findViewById(R.id.data_text);
-            TextView infoText = (TextView)view.findViewById(R.id.info_text);
-            TextView maxText = (TextView)view.findViewById(R.id.max_text);
-            TextView minText = (TextView)view.findViewById(R.id.min_text);
+            TextView infoText = (TextView) view.findViewById(R.id.info_text);
+            TextView maxText = (TextView) view.findViewById(R.id.max_text);
+            TextView minText = (TextView) view.findViewById(R.id.min_text);
 
             dateText.setText(forecast.date);
             infoText.setText(forecast.more.info);
@@ -144,13 +187,13 @@ public class WeartherActivity extends AppCompatActivity {
             minText.setText(forecast.temperature.min);
             forecastLayout.addView(view);
         }
-        if(weather.aqi!=null){
+        if (weather.aqi != null) {
             aqiText.setText(weather.aqi.city.aqi);
             pm25Text.setText(weather.aqi.city.pm25);
         }
-        String comfort = "舒适度："+weather.suggestion.comfort.info;
-        String carWash = "洗车指数："+weather.suggestion.carWash.info;
-        String sport = "运动指数："+weather.suggestion.sport.info;
+        String comfort = "舒适度：" + weather.suggestion.comfort.info;
+        String carWash = "洗车指数：" + weather.suggestion.carWash.info;
+        String sport = "运动指数：" + weather.suggestion.sport.info;
         comfortText.setText(comfort);
         carWashText.setText(carWash);
         sportText.setText(sport);
