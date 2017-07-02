@@ -2,6 +2,7 @@ package com.zjm.coolweather.fragment;
 
 
 import android.app.ProgressDialog;
+import android.content.Intent;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
 import android.util.Log;
@@ -16,6 +17,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.zjm.coolweather.R;
+import com.zjm.coolweather.WeartherActivity;
 import com.zjm.coolweather.db.City;
 import com.zjm.coolweather.db.County;
 import com.zjm.coolweather.db.Province;
@@ -115,6 +117,13 @@ public class ChoosAreaFragment extends Fragment {
                 } else if (currentlevel == LEVEL_CITY) {
                     selectedCity = cities.get(position);
                     quryCounties();
+                }else if(currentlevel==LEVEL_COUNTY){
+                    String weatherId = counties.get(position).getWeatherId();
+                    Intent intent = new Intent(getActivity(), WeartherActivity.class);
+                    intent.putExtra("weather_id",weatherId);
+                    startActivity(intent);
+                    getActivity().finish();
+
                 }
             }
         });
