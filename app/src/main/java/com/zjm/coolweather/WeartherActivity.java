@@ -5,9 +5,13 @@ import android.graphics.Color;
 import android.os.Build;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
+import android.support.v4.view.GravityCompat;
+import android.support.v4.widget.DrawerLayout;
+import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.app.AppCompatActivity;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
@@ -42,14 +46,17 @@ public class WeartherActivity extends AppCompatActivity {
     private TextView carWashText;
     private TextView sportText;
     private ImageView bingPicImg;
+    public SwipeRefreshLayout swipeRefresh;
+    public DrawerLayout drawerLayout;
+    private Button navbutton;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_wearther);
-        if (Build.VERSION.SDK_INT>=21){
+        if (Build.VERSION.SDK_INT >= 21) {
             View decorView = getWindow().getDecorView();
-            decorView.setSystemUiVisibility(View.SYSTEM_UI_FLAG_FULLSCREEN |View.SYSTEM_UI_FLAG_LAYOUT_STABLE);
+            decorView.setSystemUiVisibility(View.SYSTEM_UI_FLAG_FULLSCREEN | View.SYSTEM_UI_FLAG_LAYOUT_STABLE);
             getWindow().setStatusBarColor(Color.TRANSPARENT);
         }
         /**
@@ -67,20 +74,41 @@ public class WeartherActivity extends AppCompatActivity {
         carWashText = (TextView) findViewById(R.id.car_wash_text);
         sportText = (TextView) findViewById(R.id.sport_text);
         bingPicImg = (ImageView) findViewById(R.id.bing_pic_img);
+        swipeRefresh = (SwipeRefreshLayout) findViewById(R.id.swiupe_refresh);
+        swipeRefresh.setColorSchemeResources(R.color.colorPrimary);
+        drawerLayout = (DrawerLayout) findViewById(R.id.drawer_layout);
+        navbutton = (Button) findViewById(R.id.nav_button);
+
+        navbutton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                drawerLayout.openDrawer(GravityCompat.START);
+            }
+        });
 
 
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
         String weatherString = prefs.getString("weather", null);
+        final String weatheriId;
         if (weatherString != null) {
             //有缓存时直接解析天气数据
             Weather weather = Untility.handleWeatherResponse(weatherString);
+            weatheriId = weather.basic.weatherid;
             showWeatherInfo(weather);
         } else {
             //无缓存是从服务器获取数据
+            weatheriId = getIntent().getStringExtra("weather_id");
             String weatherId = getIntent().getStringExtra("weather_id");
             weatherLayout.setVisibility(View.INVISIBLE);
             requestWeather(weatherId);
         }
+        swipeRefresh.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
+
+            @Override
+            public void onRefresh() {
+                requestWeather(weatheriId);
+            }
+        });
         /**
          * 加载必应每日一图
          */
@@ -103,7 +131,7 @@ public class WeartherActivity extends AppCompatActivity {
             public void onResponse(Call call, Response response) throws IOException {
                 final String bingPic = response.body().string();
                 SharedPreferences.Editor editer = PreferenceManager.getDefaultSharedPreferences(WeartherActivity.this).edit();
-                editer.putString("bing_pic",bingPic);
+                editer.putString("bing_pic", bingPic);
                 editer.apply();
                 runOnUiThread(new Runnable() {
                     @Override
@@ -126,7 +154,7 @@ public class WeartherActivity extends AppCompatActivity {
      *
      * @param weatherId：天气id
      */
-    private void requestWeather(final String weatherId) {
+    public void requestWeather(final String weatherId) {
         String weatherUrl = "http://guolin.tech/api/weather?cityid=" + weatherId + "&key=ce4b166107294e9bae58d5fc2a7c2621";
         HttpUtil.sendOkHttpRequest(weatherUrl, new Callback() {
             @Override
@@ -144,6 +172,7 @@ public class WeartherActivity extends AppCompatActivity {
                         } else {
                             Toast.makeText(WeartherActivity.this, "获取天气信息失败！", Toast.LENGTH_SHORT).show();
                         }
+                        swipeRefresh.setRefreshing(false);
                     }
                 });
             }
@@ -155,6 +184,7 @@ public class WeartherActivity extends AppCompatActivity {
                     @Override
                     public void run() {
                         Toast.makeText(WeartherActivity.this, "获取天气信息失败！", Toast.LENGTH_SHORT).show();
+                        swipeRefresh.setRefreshing(false);
                     }
                 });
             }
